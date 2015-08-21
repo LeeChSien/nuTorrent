@@ -3,6 +3,8 @@ var BrowserWindow = require('browser-window')
 var Menu = require('menu')
 var menu, template
 
+var TorrentManager = require('./lib/manager')
+
 require('electron-debug')()
 require('crash-reporter').start()
 
@@ -14,8 +16,11 @@ app.on('window-all-closed', function() {
 
 
 app.on('ready', function() {
-  mainWindow = new BrowserWindow({ width: 1024, height: 728 })
+  mainWindow = new BrowserWindow({ width: 1024, height: 728 });
 
+  TorrentManager.bindIpc(mainWindow);
+  TorrentManager.restore();
+  
   if (process.env.HOT) {
     mainWindow.loadUrl('file://' + __dirname + '/../app/hot-dev-app.html')
   } else {

@@ -6,4 +6,37 @@ html {
 
 body {
   overflow: hidden;
+  padding-top: 50px;
+}
+
+.truncate {
+  display: inline-block;
+  width: 300px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.torrent-progress {
+  margin: 0px 0 0px 0;
+  min-width: 200px;
+
+  .progress {
+    margin: 0px 0 0px 0;
+  }
+}
+
+.torrent-size {
+  min-width: 80px;
+  margin: 0px 0 0px 0;
+}
+
+.torrent-actions {
+  min-width: 100px;
+  margin: 0px 0 0px 0;
+}
+
+.label-speed {
+  display: block;
+  width: 80px;
 }
