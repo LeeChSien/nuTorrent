@@ -11,7 +11,7 @@ require('crash-reporter').start()
 var mainWindow = null
 
 app.on('window-all-closed', function() {
-  if (process.platform !== 'darwin') app.quit()
+  app.quit()
 })
 
 
@@ -20,7 +20,7 @@ app.on('ready', function() {
 
   TorrentManager.bindIpc(mainWindow);
   TorrentManager.restore();
-  
+
   if (process.env.HOT) {
     mainWindow.loadUrl('file://' + __dirname + '/../app/hot-dev-app.html')
   } else {

@@ -10,8 +10,6 @@ export default class ClientList extends React.Component {
 
     this.state = {
       clientEntries: [],
-      removeIndex: -1,
-      showRemoveModal: false
     };
 
     Ipc.on('clientsList-refresh', function(clientEntries) {
@@ -22,31 +20,19 @@ export default class ClientList extends React.Component {
   }
 
   handleRemove(i) {
-    this.setState({
-      removeIndex: i,
-      showRemoveModal: true
-    });
+    this.remove(i);
   }
 
-  remove() {
+  remove(i) {
     Ipc.send('manager-removeClient',
-      this.state.clientEntries[this.state.removeIndex].controlHash);
+      this.state.clientEntries[i].controlHash);
 
     this.setState({clientEntries:
-      React.addons.update(this.state.clientEntries, {$splice: [[this.state.removeIndex, 1]]})});
-
-    this.closeRemoveModal();
-  }
-
-  closeRemoveModal() {
-    this.setState({
-      removeIndex: -1,
-      showRemoveModal: false
-    });
+      React.addons.update(this.state.clientEntries, {$splice: [[i, 1]]})});
   }
 
   render() {
-    let self = this;
+    var self = this;
     return (
       <div>
         <div className="table-responsive">
@@ -70,19 +56,6 @@ export default class ClientList extends React.Component {
 
           { (this.state.clientEntries.length == 0) ? <h5 className="text-center"> No Task</h5> : null }
         </div>
-
-        <Modal show={this.state.showRemoveModal} onHide={this.closeRemoveModal.bind(this)}>
-          <Modal.Header closeButton>
-            <Modal.Title>Remove Torrent</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            <p>Are you sure?</p>
-          </Modal.Body>
-          <Modal.Footer>
-            <Button onClick={this.closeRemoveModal.bind(this)}>Close</Button>
-            <Button onClick={this.remove.bind(this)} bsStyle='danger'>Remove</Button>
-          </Modal.Footer>
-        </Modal>
       </div>
     )
   }

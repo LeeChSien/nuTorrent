@@ -1,5 +1,6 @@
 import React from 'react'
 import { ProgressBar, Tooltip, OverlayTrigger } from 'react-bootstrap'
+
 import Ipc from 'ipc'
 
 export default class Client extends React.Component {
@@ -77,7 +78,7 @@ export default class Client extends React.Component {
     const nameTooltip = (
           <Tooltip>{name}</Tooltip>
         );
-        
+
     let name = (this.state.clientInfo.state == 'none') ?
           'Initializing torrent...' : this.state.clientInfo.torrentName;
 
@@ -111,16 +112,20 @@ export default class Client extends React.Component {
           <div className="torrent-size">{size}</div>
         </td>
         <td>
-          <span className="label label-success label-speed label-lg">
-            {downlink}
-            <span className="glyphicon glyphicon-arrow-down" aria-hidden="true"></span>
-          </span>
+          <div className="label-speed">
+            <span className="label label-success">
+              {downlink}
+              <span className="glyphicon glyphicon-arrow-down" aria-hidden="true"></span>
+            </span>
+          </div>
         </td>
         <td>
-          <span className="label label-warning label-speed label-lg">
-            {uplink}
-            <span className="glyphicon glyphicon-arrow-up" aria-hidden="true"></span>
-          </span>
+          <div className="label-speed">
+            <span className="label label-warning label-speed">
+              {uplink}
+              <span className="glyphicon glyphicon-arrow-up" aria-hidden="true"></span>
+            </span>
+          </div>
         </td>
         <td className="torrent-actions text-center">
           <div className="btn-group" role="group" aria-label="client-actions">

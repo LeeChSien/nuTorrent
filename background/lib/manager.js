@@ -41,7 +41,7 @@ function Manager() {
         ipcEventName = 'client-refresh-' + entry.controlHash;
 
     client.setIpcRefreshCallback(function(clientInfo) {
-      window.webContents.send(ipcEventName, clientInfo);
+      if (window && window.webContents) { window.webContents.send(ipcEventName, clientInfo); }
     });
 
     clients.push(client);

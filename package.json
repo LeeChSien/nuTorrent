@@ -11,8 +11,8 @@
     "start": "electron .",
     "start-dev": "NODE_ENV=development electron .",
     "start-hot": "HOT=1 NODE_ENV=development electron .",
-    "package": "node package.js",
-    "package-all": "node package.js --all"
+    "package": "node package.js --name elecTorrent --app-version 0.0.1 --icon ./icon/web_hi_res_512.icns",
+    "package-all": "node package.js --name=elecTorrent --app-version 0.0.1 --icon=icon/web_hi_res_512.icns --all"
   },
   "author": {
     "name": "Jason Lee",
