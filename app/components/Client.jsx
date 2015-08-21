@@ -53,7 +53,7 @@ export default class Client extends React.Component {
     if (!dataRate) { return 0; }
 
     var KByte = dataRate/1024,
-        MByte = KByte/1024;
+        MByte = dataRate/(1024*1024);
 
     return (KByte > 1000) ?
             ((MByte).toFixed(2) + ' MB/s') :
@@ -64,8 +64,8 @@ export default class Client extends React.Component {
     if (!size) { return 0; }
 
     var KByte = size/1024,
-        MByte = KByte/1024,
-        GByte = MByte/1024;
+        MByte = size/(1024*1024),
+        GByte = size/(1024*1024*1024);
 
     return (MByte > 1000) ?
             ((GByte).toFixed(2) + ' GB') :
