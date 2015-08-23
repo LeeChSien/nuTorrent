@@ -1,16 +1,19 @@
-Electron-Torrent
+Electron Torrent
 ==============
-
-![alt tag](https://cloud.githubusercontent.com/assets/1298784/9414596/51b7f8bc-486c-11e5-94b9-4960b1949d17.png)
 
 Electron-Torrent is a pure javascript bittorrent client based on Electron, React, torrent-stream.
 
-OS X Binary: [download link](https://goo.gl/Rbh49O)
+OS X Binary (v0.5.0): [download link](https://goo.gl/NmvddN)
+
+Screenshot
+------------
+
+![alt tag](https://cloud.githubusercontent.com/assets/1298784/9428375/d335081c-49de-11e5-9cd0-e812a132d293.png)
 
 Usage
 ------------
 * Open the app
-* Add a magnet link
+* Add a magnet url or torrent file.
 
 Build
 ------------
@@ -20,7 +23,7 @@ Install dependencies.
 $ npm install
 ```
 
-To start development !
+To start development!
 
 ```bash
 npm run hot-dev-server
