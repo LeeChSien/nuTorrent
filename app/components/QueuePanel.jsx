@@ -93,7 +93,6 @@ export default class QueuePanel extends React.Component {
 
   addMagnetUrl() {
     if (this.state.magnetUrl.match(/magnet:\?xt=urn:[a-z0-9]+:[a-z0-9]{32}/i) != null) {
-      console.log(this.state.magnetUrl);
       Ipc.send('add-client-from-magnet', this.state.magnetUrl);
       this.closeMagnetModal();
     } else {
@@ -214,7 +213,7 @@ export default class QueuePanel extends React.Component {
     let selectRowProp = {
       mode: "checkbox",
       clickToSelect: true,
-      bgColor: "rgb(238, 193, 213)",
+      bgColor: "#E0FFFF",
       onSelect: this.onCliensSelect.bind(this),
       onSelectAll: this.onSelectAllClient.bind(this)
     };

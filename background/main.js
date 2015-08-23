@@ -12,10 +12,30 @@ require('crash-reporter').start()
 var mainWindow = null
 
 app.on('window-all-closed', function() {
-  TorrentManager.quit();
-  app.quit()
+  TorrentManager.quit().then(function() {
+    app.quit();
+  });
 })
 
+app.on('open-url', function(event, url) {
+  if (GlobalState.getWindow()) {
+    TorrentManager.openUrl(url);
+  } else {
+    app.on('preopen-url', function() {
+      TorrentManager.openUrl(url);
+    });
+  }
+})
+
+app.on('open-file', function(event, path) {
+  if (GlobalState.getWindow()) {
+    TorrentManager.openFile(path);
+  } else {
+    app.on('preopen-url', function() {
+      TorrentManager.openFile(path);
+    });
+  }
+})
 
 app.on('ready', function() {
   mainWindow = new BrowserWindow({ width: 1024, height: 600, resizable: false });
@@ -23,6 +43,9 @@ app.on('ready', function() {
   GlobalState.setWindow(mainWindow);
   TorrentManager.bindIpc();
   TorrentManager.restore();
+
+  app.emit('preopen-url');
+  app.emit('preopen-file');
 
   if (process.env.HOT) {
     mainWindow.loadUrl('file://' + __dirname + '/../app/hot-dev-app.html')

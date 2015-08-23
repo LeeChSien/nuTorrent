@@ -15,7 +15,11 @@ var LocalStorage = function() {
   }
 
   function saveClients(clients) {
-    Jsonfile.writeFileSync(CLIENTS_JSON_FILE_PATH, clients);
+    var deferred = Defer();
+    Jsonfile.writeFile(CLIENTS_JSON_FILE_PATH, clients, function(err) {
+      deferred.resolve();
+    });
+    return deferred.promise;
   }
 
   function getClients() {

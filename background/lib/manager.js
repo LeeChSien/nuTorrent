@@ -1,6 +1,7 @@
-var fs = require("fs")
+var fs           = require("fs")
 var parseTorrent = require('parse-torrent')
-var Md5      = require('md5')
+var Md5          = require('md5')
+var Defer        = require("node-promise").defer
 
 var App     = require('app')
 var Ipc     = require('ipc')
@@ -8,6 +9,8 @@ var Dialog  = require('dialog')
 
 var Client  = require('./client')
 var LocalStorage  = require('./local-storage')
+
+var GlobalState = require('./global-state')
 
 var clients = [];
 
@@ -52,10 +55,13 @@ var Manager = function() {
   }
 
   function removeClient(controlHash) {
-    getItemBy(clients, 'controlHash', controlHash).teardown();
-    removeItemBy(clients, 'controlHash', controlHash);
+    var _client = getItemBy(clients, 'controlHash', controlHash);
+    if (_client) {
+      _client.teardown();
+      removeItemBy(clients, 'controlHash', controlHash);
 
-    LocalStorage.saveClients(getClients());
+      LocalStorage.saveClients(getClients());
+    }
   }
 
   function restoreClients() {
@@ -85,31 +91,69 @@ var Manager = function() {
   }
 
   function quit() {
-    LocalStorage.saveClients(getClients());
+    var deferred = Defer();
+    LocalStorage.saveClients(getClients()).then(function() {
+      deferred.resolve();
+    });
+    return deferred.promise;
+  }
+
+  function openUrl(magnet) {
+    if (getItemBy(clients , 'magnet', magnet)) {
+      Dialog.showMessageBox({
+        type:    'error',
+        buttons: ['ok'],
+        title:   'Duplicate torrent',
+        message: 'Duplicate torrent',
+        detail:  'This torrent is already exist in the queue.'
+      }, function() {  });
+      return;
+    }
+
+    Dialog.showOpenDialog({
+      title: 'Select download path',
+      properties: ['openDirectory']
+    }, function (paths) {
+      if (paths) {
+        addClient(magnet, paths[0]);
+
+        var Window  = GlobalState.getWindow();
+        if (Window) {Window.webContents.send('client-list-refresh', getClients()); }
+      }
+    });
+  }
+
+  function openFile(file) {
+    var result = parseTorrent(fs.readFileSync(file)),
+        magnet = parseTorrent.toMagnetURI(result);
+
+    if (getItemBy(clients , 'magnet', magnet)) {
+      Dialog.showMessageBox({
+        type:    'error',
+        buttons: ['ok'],
+        title:   'Duplicate torrent',
+        message: 'Duplicate torrent',
+        detail:  'This torrent is already exist in the queue.'
+      }, function() {  });
+      return;
+    }
+
+    Dialog.showOpenDialog({
+      title: 'Select download path',
+      properties: ['openDirectory']
+    }, function (paths) {
+      if (paths) {
+        addClient(magnet, paths[0]);
+
+        var Window  = GlobalState.getWindow();
+        if (Window) {Window.webContents.send('client-list-refresh', getClients()); }
+      }
+    });
   }
 
   function bindIpc() {
     Ipc.on('add-client-from-magnet', function(event, magnet) {
-      if (getItemBy(clients , 'magnet', magnet)) {
-        Dialog.showMessageBox({
-          type:    'error',
-          buttons: ['ok'],
-          title:   'Duplicate torrent',
-          message: 'Duplicate torrent',
-          detail:  'This torrent is already exist in the queue.'
-        }, function() {  });
-        return;
-      }
-
-      Dialog.showOpenDialog({
-        title: 'Select download path',
-        properties: ['openDirectory']
-      }, function (paths) {
-        if (paths) {
-          addClient(magnet, paths[0]);
-          event.sender.send('client-list-refresh', getClients());
-        }
-      });
+      openUrl(magnet);
     });
 
     Ipc.on('add-client-from-torrent', function(event) {
@@ -121,29 +165,7 @@ var Manager = function() {
         ]
       }, function (torrentPaths) {
         if (torrentPaths) {
-          var result = parseTorrent(fs.readFileSync(torrentPaths[0])),
-              magnet = parseTorrent.toMagnetURI(result);
-
-          if (getItemBy(clients , 'magnet', magnet)) {
-            Dialog.showMessageBox({
-              type:    'error',
-              buttons: ['ok'],
-              title:   'Duplicate torrent',
-              message: 'Duplicate torrent',
-              detail:  'This torrent is already exist in the queue.'
-            }, function() {  });
-            return;
-          }
-
-          Dialog.showOpenDialog({
-            title: 'Select download path',
-            properties: ['openDirectory']
-          }, function (paths) {
-            if (paths) {
-              addClient(magnet, paths[0]);
-              event.sender.send('client-list-refresh', getClients());
-            }
-          });
+          openFile(torrentPaths[0]);
         }
       });
     });
@@ -159,20 +181,21 @@ var Manager = function() {
     Ipc.on('client-stop', function(event, controlHashes) {
       controlHashes.forEach(function(controlHash) {
         var c = getItemBy(clients , 'controlHash', controlHash)
-        if (c.can('stop')) { c.stop(); }
+        if (c && c.can('stop')) { c.stop(); }
       });
     });
 
     Ipc.on('client-resume', function(event, controlHashes) {
       controlHashes.forEach(function(controlHash) {
         var c = getItemBy(clients , 'controlHash', controlHash)
-        if (c.can('resume')) { c.resume(); }
+        if (c && c.can('resume')) { c.resume(); }
       });
     });
 
     Ipc.on('client-open-path', function(event, controlHashes) {
       controlHashes.forEach(function(controlHash) {
-        getItemBy(clients , 'controlHash', controlHash).openPath();
+        var c = getItemBy(clients , 'controlHash', controlHash)
+        if (c) { c.openPath(); }
       });
     });
 
@@ -184,6 +207,8 @@ var Manager = function() {
   return {
     bindIpc: bindIpc,
     restore: restore,
+    openFile: openFile,
+    openUrl: openUrl,
     quit: quit
   };
 }

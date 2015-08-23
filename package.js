@@ -7,7 +7,7 @@ var del = require('del')
 var latest = require('github-latest-release')
 var argv = require('minimist')(process.argv.slice(2))
 var devDeps = Object.keys(require('./package.json').devDependencies)
-
+var packageJson = require('./package.json')
 
 var appName = argv.name || argv.n || 'ElectronReact'
 var shouldUseAsar = argv.asar || argv.a || false
@@ -15,6 +15,7 @@ var shouldBuildAll = argv.all || false
 
 
 var DEFAULT_OPTS = {
+  'app-version': packageJson.version,
   dir: './',
   name: appName,
   asar: shouldUseAsar,
