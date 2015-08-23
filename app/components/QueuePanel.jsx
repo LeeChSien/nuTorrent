@@ -5,6 +5,11 @@ import { BootstrapTable, TableHeaderColumn, TableDataSet } from 'react-bootstrap
 import Ipc from 'ipc'
 
 export default class QueuePanel extends React.Component {
+  static defaultProps = {
+    clients: [],
+    selectedClients: {}
+  }
+
   constructor(props) {
     super(props);
 
@@ -20,8 +25,6 @@ export default class QueuePanel extends React.Component {
 
     this.props.clients = [];
     this.clients = new TableDataSet(this.props.clients);
-
-    this.props.selectedClients = {};
 
     // Clear previos events
     Ipc.removeAllListeners('client-list-refresh');

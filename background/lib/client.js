@@ -98,7 +98,6 @@ Client.prototype = {
 
   onenterstop: function(event, from, to) {
     this.teardown();
-    console.log(this.getAttributes());
   },
 
   onenterdone: function(event, from, to) {
