@@ -1,42 +1,58 @@
 
-
 html {
+  height: 100%;
   overflow: hidden;
 }
 
 body {
+  height: 100%;
   overflow: hidden;
-  padding-top: 50px;
 }
 
-.truncate {
-  display: inline-block;
-  width: 300px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.control-label {
+  padding-right: 15px;
 }
 
-.torrent-progress {
-  margin: 0px 0 0px 0;
-  min-width: 200px;
+.app-full-height, #react-root {
+  height: 100%;
+}
 
-  .progress {
-    margin: 0px 0 0px 0;
+.sidebar {
+  padding: 10px 10px;
+  background-color: #f8f8f8;
+}
+
+.page {
+  padding: 20px 20px;
+}
+
+.queue-panel-nav {
+  margin-bottom: 0;
+
+  .navbar-btn {
+    margin-left: 5px;
+  }
+
+  .btn-group {
+    margin-left: 40px;
   }
 }
 
-.torrent-size {
-  min-width: 80px;
-  margin: 0px 0 0px 0;
+.no-task {
+  margin-top: 100px;
 }
 
-.torrent-actions {
-  min-width: 100px;
-  margin: 0px 0 0px 0;
-}
+td {
+  h5, div, a {
+    margin: 0;
+    display: inline-block;
+    width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 
-.label-speed {
-  display: block;
-  width: 80px;
+  .progress {
+    margin: 0;
+  }
 }

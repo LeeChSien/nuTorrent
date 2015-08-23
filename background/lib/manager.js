@@ -1,169 +1,190 @@
+var fs = require("fs")
+var parseTorrent = require('parse-torrent')
 var Md5      = require('md5')
-var Jsonfile = require('jsonfile')
 
 var App     = require('app')
 var Ipc     = require('ipc')
 var Dialog  = require('dialog')
 
 var Client  = require('./client')
-
-var ENTRIES_JSON_FILE_PATH = App.getPath('userCache') + '/' + 'entries.json';
+var LocalStorage  = require('./local-storage')
 
 var clients = [];
-var clientEntries = [];
 
-var window = null;
 
-function Manager() {
+// Array utils
 
-  function removeItemByControlHash(array, controlHash){
-    for(var i in array){
-      if(array[i].controlHash == controlHash){
-        array.splice(i,1);
-        break;
-      }
+function removeItemBy(array, key, value){
+  for (var i in array) {
+    if (array[i][key] == value) {
+      array.splice(i,1);
+      break;
     }
   }
+}
 
-  function getItemBy(array, key, value){
-    for(var i in array){
-      if(array[i][key] == value){
-        return array[i];
-      }
+function getItemBy(array, key, value){
+  for (var i in array) {
+    if (array[i][key] == value) {
+      return array[i];
     }
-    return null;
   }
+  return null;
+}
 
-  //
 
-  function addClient(entry, setting) {
-    var client = new Client(entry, setting),
-        ipcEventName = 'client-refresh-' + entry.controlHash;
+var Manager = function() {
+  // Private
 
-    client.setIpcRefreshCallback(function(clientInfo) {
-      if (window && window.webContents) { window.webContents.send(ipcEventName, clientInfo); }
-    });
+  function addClient(magnet, path) {
+    var controlHash  = Md5(magnet + (new Date().getTime())),
+        setting = {
+          verify: true,
+          path: path ? path : null,
+          tmp: App.getPath('userCache'),
+          connections: 30
+        },
+        client = new Client();
 
+    client.setup(controlHash, magnet, setting);
     clients.push(client);
+    LocalStorage.saveClients(getClients());
   }
 
   function removeClient(controlHash) {
-    removeItemByControlHash(clients, controlHash);
+    getItemBy(clients, 'controlHash', controlHash).teardown();
+    removeItemBy(clients, 'controlHash', controlHash);
+
+    LocalStorage.saveClients(getClients());
+  }
+
+  function restoreClients() {
+    LocalStorage.getClients().then(function(existClients) {
+      existClients.forEach(function(clientAttributes) {
+        var client = new Client();
+        client.restore(clientAttributes);
+        clients.push(client);
+      });
+    });
   }
 
   function getClients() {
-    return clients;
+    return clients.map(function(client) {
+      return client.getAttributes();
+    });
   }
 
   function getClient(index) {
     return clients[index];
   }
 
-  //
-
-  function addClientEntry(entry) {
-    clientEntries.push(entry);
-    save();
-  }
-
-  function removeClientEntry(controlHash) {
-    removeItemByControlHash(clientEntries, controlHash);
-    save();
-  }
-
-  function getClientEntries() {
-    return clientEntries;
-  }
-
-  //
+  // Public
 
   function restore() {
-    Jsonfile.readFile(ENTRIES_JSON_FILE_PATH, function (err, _clientEntries) {
-      if (!err && _clientEntries) {
-        clientEntries = _clientEntries;
-        clientEntries.forEach(function(clientEntry) {
-          var setting = {
-            verify: true,
-            path: clientEntry.path,
-            tmp: App.getPath('userCache')
-          };
-
-          addClient(clientEntry, setting);
-        });
-
-        window.webContents.send('clientsList-refresh', getClientEntries());
-      }
-    });
+    restoreClients()
   }
 
-  function save() {
-    Jsonfile.writeFile(ENTRIES_JSON_FILE_PATH, clientEntries, function (err) {
-      //
-    });
+  function quit() {
+    LocalStorage.saveClients(getClients());
   }
 
-  function bindIpc(mainWindow) {
-    window = mainWindow;
-
-    Ipc.on('manager-addClient', function(event, torrentSource) {
-      if (getItemBy(clientEntries, 'torrentSource', torrentSource)) {
+  function bindIpc() {
+    Ipc.on('add-client-from-magnet', function(event, magnet) {
+      if (getItemBy(clients , 'magnet', magnet)) {
         Dialog.showMessageBox({
           type:    'error',
           buttons: ['ok'],
           title:   'Duplicate torrent',
           message: 'Duplicate torrent',
           detail:  'This torrent is already exist in the queue.'
-        }, function() {
-          //
-        });
+        }, function() {  });
         return;
       }
 
       Dialog.showOpenDialog({
-        title: 'Select Download Path',
+        title: 'Select download path',
         properties: ['openDirectory']
-      }, function (downloadPath) {
-        if (downloadPath) {
-          var hash  = Md5(torrentSource + (new Date().getTime())),
-              entry = {
-                controlHash: hash,
-                torrentSource: torrentSource,
-                path: downloadPath[0]
-              },
-              setting = {
-                verify: true,
-                path: downloadPath[0],
-                tmp: App.getPath('userCache')
-              };
-
-
-          addClient(entry, setting);
-          addClientEntry(entry);
-
-          event.sender.send('clientsList-refresh', getClientEntries());
+      }, function (paths) {
+        if (paths) {
+          addClient(magnet, paths[0]);
+          event.sender.send('client-list-refresh', getClients());
         }
       });
     });
 
-    Ipc.on('manager-removeClient', function(event, controlHash) {
-      var _client = getItemBy(clients, 'controlHash', controlHash);
+    Ipc.on('add-client-from-torrent', function(event) {
+      Dialog.showOpenDialog({
+        title: 'Open torrent',
+        properties: ['openFile'],
+        filters: [
+          { name: 'torrent', extensions: ['torrent'] }
+        ]
+      }, function (torrentPaths) {
+        if (torrentPaths) {
+          var result = parseTorrent(fs.readFileSync(torrentPaths[0])),
+              magnet = parseTorrent.toMagnetURI(result);
 
-      if (!_client.is('done') && !_client.is('stop')) { _client.stop(); }
+          if (getItemBy(clients , 'magnet', magnet)) {
+            Dialog.showMessageBox({
+              type:    'error',
+              buttons: ['ok'],
+              title:   'Duplicate torrent',
+              message: 'Duplicate torrent',
+              detail:  'This torrent is already exist in the queue.'
+            }, function() {  });
+            return;
+          }
 
-      removeClientEntry(controlHash);
-      removeClient(controlHash);
-
-      event.sender.send('clientsList-refresh', getClientEntries());
+          Dialog.showOpenDialog({
+            title: 'Select download path',
+            properties: ['openDirectory']
+          }, function (paths) {
+            if (paths) {
+              addClient(magnet, paths[0]);
+              event.sender.send('client-list-refresh', getClients());
+            }
+          });
+        }
+      });
     });
 
-    Ipc.on('manager-requestRefresh', function(event) {
-      event.sender.send('clientsList-refresh', getClientEntries());
+
+    Ipc.on('client-remove', function(event, controlHashes) {
+      controlHashes.forEach(function(controlHash) {
+        removeClient(controlHash);
+      });
+      event.sender.send('client-list-refresh', getClients());
+    });
+
+    Ipc.on('client-stop', function(event, controlHashes) {
+      controlHashes.forEach(function(controlHash) {
+        var c = getItemBy(clients , 'controlHash', controlHash)
+        if (c.can('stop')) { c.stop(); }
+      });
+    });
+
+    Ipc.on('client-resume', function(event, controlHashes) {
+      controlHashes.forEach(function(controlHash) {
+        var c = getItemBy(clients , 'controlHash', controlHash)
+        if (c.can('resume')) { c.resume(); }
+      });
+    });
+
+    Ipc.on('client-open-path', function(event, controlHashes) {
+      controlHashes.forEach(function(controlHash) {
+        getItemBy(clients , 'controlHash', controlHash).openPath();
+      });
+    });
+
+    Ipc.on('request-client-list-refresh', function(event, controlHash) {
+      event.sender.send('client-list-refresh', getClients());
     });
   }
 
   return {
     bindIpc: bindIpc,
-    restore: restore
+    restore: restore,
+    quit: quit
   };
 }
 

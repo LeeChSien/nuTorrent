@@ -4,6 +4,7 @@ var Menu = require('menu')
 var menu, template
 
 var TorrentManager = require('./lib/manager')
+var GlobalState = require('./lib/global-state')
 
 require('electron-debug')()
 require('crash-reporter').start()
@@ -11,14 +12,16 @@ require('crash-reporter').start()
 var mainWindow = null
 
 app.on('window-all-closed', function() {
+  TorrentManager.quit();
   app.quit()
 })
 
 
 app.on('ready', function() {
-  mainWindow = new BrowserWindow({ width: 1024, height: 728 });
+  mainWindow = new BrowserWindow({ width: 1024, height: 600, resizable: false });
 
-  TorrentManager.bindIpc(mainWindow);
+  GlobalState.setWindow(mainWindow);
+  TorrentManager.bindIpc();
   TorrentManager.restore();
 
   if (process.env.HOT) {

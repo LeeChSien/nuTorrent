@@ -13,6 +13,7 @@ export default class MainContainer extends React.Component {
     return (
       <div>
         <ManagerPanel></ManagerPanel>
+        <Link to="main">back Home</Link>
       </div>
     )
   }

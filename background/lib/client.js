@@ -1,68 +1,85 @@
-var Util          = require('util');
-var Events        = require('events');
-var Open          = require("open");
+var Util = require('util')
+var Open = require("open")
 
-var torrentStream = require('./torrent-stream/torrent-stream');
-var StateMachine  = require('javascript-state-machine');
+var TorrentStream = require('./torrent-stream/index')
+var StateMachine  = require('javascript-state-machine')
 
-var Ipc           = require('ipc');
+var Ipc = require('ipc')
+var GlobalState = require('./global-state')
+
 
 var PROGRESS_CHECKER_INTERVAL = 1000;
 
-var Client = function(entry, setting) {
+var Client = function() {
   // Private
-  this._controlHash = entry.controlHash;
-  this._setting = setting;
-
+  this._setting = {};
   this._engine = null;
+  this._progressIntervalChecker = null;
+  this._lastSwarm = null;
+
+  this._name = null;
   this._progress = 0;
-
-  this._progress_interval_checker = null;
-  this._last_swarm = null;
-
-  this._eventEmitter = new Events.EventEmitter();
-  this._ipcRefreshCallback = null;
-
-  // Public
-  this.current_data_rate = {
+  this._size = 0;
+  this._torrentHash = null;
+  this._currentDataRate = {
     download: 0,
     upload: 0
   };
-  this.controlHash = entry.controlHash;
-  this.torrentSource = entry.torrentSource;
 
-  var self = this;
-
-  // Construct Ipc event
-  Ipc.on('client-stop-' + this._controlHash, function(event, torrentSource) {
-    self.stop();
-  });
-
-  Ipc.on('client-resume-' + this._controlHash, function(event, torrentSource) {
-    self.resume();
-  });
-
-  Ipc.on('client-openPath-' + this._controlHash, function(event, torrentSource) {
-    Open(self._setting.path);
-  });
-
-  this.setup();
+  // Public
+  this.controlHash = '';
+  this.magnet = '';
 };
 
 Client.prototype = {
   // State transition callbacks
-  onentersetup: function(event, from, to) {
-    var self = this,
-        torrentSource = this.torrentSource,
-        setting = this._setting;
+  onenterrestore: function(event, from, to, attributes) {
+    var self = this, clonedSetting;
 
-    if (typeof torrentSource === 'string') {
-      self._engine = torrentStream(torrentSource, setting); // torrentSource as magnet link
-    } else {
-      // torrentSource as .torrent file
+    this.controlHash = attributes.controlHash;
+    this.magnet = attributes.magnet;
+    this._progress = attributes.progress;
+    this._setting = attributes.setting;
+
+    clonedSetting = JSON.parse(JSON.stringify(this._setting));
+
+    self._engine = TorrentStream(this.magnet, clonedSetting);
+    self._engine.on('ready', function() {
+      self._name        = self._engine.torrent.name;
+      self._size        = self._engine.torrent.length;
+      self._torrentHash = self._engine.torrent.infoHash;
+
+      if (attributes.state == 'stop') {
+        self.stop();
+      } else {
+        self.ready();
+      }
+
+    });
+  },
+
+  onenterresume: function(event, from, to) {
+    this._updateView();
+    this.setup();
+  },
+
+  onentersetup: function(event, from, to, controlHash, magnet, setting) {
+    var self = this, clonedSetting;
+
+    if (controlHash && magnet && setting) {
+      this._setting = setting;
+      this.controlHash = controlHash;
+      this.magnet = magnet;
     }
 
+    clonedSetting = JSON.parse(JSON.stringify(this._setting));
+
+    self._engine = TorrentStream(this.magnet, clonedSetting);
     self._engine.on('ready', function() {
+      self._name        = self._engine.torrent.name;
+      self._size        = self._engine.torrent.length;
+      self._torrentHash = self._engine.torrent.infoHash;
+
       self.ready();
     });
   },
@@ -73,7 +90,6 @@ Client.prototype = {
 
   onenterdownload: function(event, from, to) {
     this._engine.files.forEach(function(file) {
-      //console.log(file);
       file.createReadStream();
     });
 
@@ -82,6 +98,7 @@ Client.prototype = {
 
   onenterstop: function(event, from, to) {
     this.teardown();
+    console.log(this.getAttributes());
   },
 
   onenterdone: function(event, from, to) {
@@ -89,79 +106,100 @@ Client.prototype = {
   },
 
   // Private function
-  _intervelProgressChecker: function() {
-    // Check progress
-    var progress = this._engine.getProgress();
-
-    // Calculate Data Rate
-    if (this._last_swarm) {
-      this.current_data_rate = {
-        download: (this._engine.swarm.downloaded - this._last_swarm.downloaded) / (PROGRESS_CHECKER_INTERVAL / 1000),
-        upload: (this._engine.swarm.uploaded - this._last_swarm.uploaded) / (PROGRESS_CHECKER_INTERVAL / 1000)
+  _caculateDataRate: function() {
+    if (this._lastSwarm) {
+      this._currentDataRate = {
+        download: (this._engine.swarm.downloaded - this._lastSwarm.downloaded) /
+          (PROGRESS_CHECKER_INTERVAL / 1000),
+        upload: (this._engine.swarm.uploaded - this._lastSwarm.uploaded) /
+          (PROGRESS_CHECKER_INTERVAL / 1000)
       };
     }
-    this._last_swarm = {
+
+    this._lastSwarm = {
       downloaded: this._engine.swarm.downloaded,
       uploaded: this._engine.swarm.uploaded,
     };
+  },
 
-    // Update ClientInfo through IPC
-    if (this._ipcRefreshCallback) {
-      this._ipcRefreshCallback(this.getInfo());
-    }
+  _updateView: function() {
+    var Window  = GlobalState.getWindow();
+    if (Window) {Window.webContents.send('client-refresh', this.getAttributes()); }
+  },
+
+  _intervelProgressChecker: function() {
+    // Check progress
+    this._progress = this._engine.getProgress();
+
+    // Calculate Data Rate
+    this._caculateDataRate();
+
+    // Update View
+    this._updateView();
 
     // Check if complete
-    if (progress == 1) { this.complete(); }
+    if (this._progress == 1) { this.complete(); }
   },
+
   _allocateIntervelProgressChecker: function() {
-    this._progress_interval_checker =
-      !this._progress_interval_checker ?
+    this._progressIntervalChecker =
+      !this._progressIntervalChecker ?
         setInterval(this._intervelProgressChecker.bind(this), PROGRESS_CHECKER_INTERVAL) :
-        this._progress_interval_checker;
+        this._progressIntervalChecker;
   },
+
   _releaseIntervelProgressChecker: function() {
-    if (this._progress_interval_checker) {
-      clearInterval(this._progress_interval_checker);
-      this._progress_interval_checker = null
+    if (this._progressIntervalChecker) {
+      clearInterval(this._progressIntervalChecker);
+      this._progressIntervalChecker = null
     }
   },
 
   // Public function
-  getInfo: function() {
+  getAttributes: function() {
     return {
-      state:           this.current,
-      torrentInfo:     this._engine.torrent.info,
-      torrentHash:     this._engine.torrent.infoHash,
-      torrentName:     this._engine.torrent.name,
-      progress:        this._engine.getProgress(),
-      currentDataRate: this.current_data_rate
+      state:       this.current,
+      name:        this._name,
+      progress:    this._progress,
+      size:        this._size,
+      downlink:    this._currentDataRate.download,
+      uplink:      this._currentDataRate.upload,
+      torrentHash: this._torrentHash,
+      controlHash: this.controlHash,
+      magnet:      this.magnet,
+      setting:     this._setting
     };
   },
-  setIpcRefreshCallback: function(callback) {
-    this._ipcRefreshCallback = callback;
+
+  openPath: function() {
+    // TODO test _setting will not be clean
+    Open(this._setting.path);
   },
+
   teardown: function() {
     this._releaseIntervelProgressChecker();
+    if (this._engine) { this._engine.destroy(); }
+    this._lastSwarm = null;
 
-    if (this._ipcRefreshCallback) {
-      this._ipcRefreshCallback(this.getInfo());
-    }
+    this._currentDataRate = {
+      download: 0,
+      upload: 0
+    };
 
-    this._engine.destroy();
-    this._last_swarm = null;
+    this._updateView();
   }
-
 };
 
 StateMachine.create({
   target: Client.prototype,
   events: [
-    { name: 'setup',    from: 'none',        to: 'setup'  },
-    { name: 'ready',    from: 'setup',       to: 'ready'  },
-    { name: 'download', from: 'ready',       to: 'download' },
-    { name: 'stop',     from: 'download',    to: 'stop' },
-    { name: 'resume',   from: 'stop',        to: 'setup' },
-    { name: 'complete', from: 'download',    to: 'done' },
+    { name: 'restore',  from: 'none',                  to: 'restore'  },
+    { name: 'setup',    from: ['none', 'resume'],      to: 'setup'  },
+    { name: 'ready',    from: ['setup', 'restore'],    to: 'ready'  },
+    { name: 'download', from: 'ready',                 to: 'download' },
+    { name: 'stop',     from: ['download', 'restore'], to: 'stop' },
+    { name: 'resume',   from: 'stop',                  to: 'resume' },
+    { name: 'complete', from: 'download',              to: 'done' },
   ]});
 
 module.exports = Client;

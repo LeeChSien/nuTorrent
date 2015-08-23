@@ -129,6 +129,12 @@ var torrentStream = function(link, opts, cb) {
 		var pieces = torrent.pieces.map(function(hash, i) {
 			return piece(i === torrent.pieces.length-1 ? pieceRemainder : pieceLength);
 		});
+		var reservations = torrent.pieces.map(function() {
+			return [];
+		});
+
+		discovery.setTorrent(torrent);
+
 
 		// Customize Total Progress API
 		engine.getProgress = function() {
@@ -163,12 +169,6 @@ var torrentStream = function(link, opts, cb) {
 			}
 		});
 
-		var reservations = torrent.pieces.map(function() {
-			return [];
-		});
-
-		discovery.setTorrent(torrent);
-
 		engine.files = torrent.files.map(function(file) {
 			file = Object.create(file);
 			var offsetPiece = (file.offset / torrent.pieceLength) | 0;
@@ -195,6 +195,39 @@ var torrentStream = function(link, opts, cb) {
 			};
 
 			return file;
+		});
+
+		// Customize Total Progress API
+		engine.getProgress = function() {
+			var completePiecesLength = 0;
+
+			pieces.forEach(function(piece) {
+				if (!piece)
+					completePiecesLength++;
+			});
+
+			return completePiecesLength / pieces.length;
+		};
+
+		// Customize File Progress API
+		engine.files.forEach(function(file) {
+			file.getProgress = function() {
+				var fileStart = file.offset;
+				var fileEnd = file.offset + file.length;
+
+				var firstPiece = Math.floor(fileStart / pieceLength);
+				var lastPiece = Math.floor((fileEnd - 1) / pieceLength);
+
+				var completePiecesLength = 0;
+				var filePieceLength = lastPiece - firstPiece + 1;
+
+				for (var i = firstPiece; i <= lastPiece; i++) {
+					if (!pieces[i])
+						completePiecesLength++;
+				}
+
+				return completePiecesLength / filePieceLength;
+			}
 		});
 
 		var oninterestchange = function() {

@@ -1,5 +1,5 @@
 module.exports = {
-//  bootstrapCustomizations: "./bootstrap-customizations.scss",
+  bootstrapCustomizations: "./app/styles/bootstrap-customizations.scss",
 //  mainSass: "./main.scss", // path to your main SASS file (optional)
   verbose: true, // print out your custom files used
   debug: false, // print out the full generated scss file

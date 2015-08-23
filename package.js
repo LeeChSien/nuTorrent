@@ -85,7 +85,6 @@ function pack(plat, arch, cb) {
   packager(opts, cb)
 }
 
-
 function log(plat, arch) {
   return function(err, filepath) {
     if (err) return console.error(err)
