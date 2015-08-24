@@ -1,6 +1,6 @@
 {
-  "name": "electron-torrent",
-  "version": "0.5.0",
+  "name": "nuTorrent",
+  "version": "0.6.0",
   "description": "Pure Javascript BitTorrent Client",
   "main": "background/main.js",
   "scripts": {
@@ -11,8 +11,8 @@
     "start": "electron .",
     "start-dev": "NODE_ENV=development electron .",
     "start-hot": "HOT=1 NODE_ENV=development electron .",
-    "package": "node package.js --name='Electron Torrent' --icon=./icon/web_hi_res_512.icns",
-    "package-all": "node package.js --name='Electron Torrent' --icon=icon/web_hi_res_512.icns --all"
+    "package": "node package.js --name='νTorrent' --icon=./icon/web_hi_res_512.icns",
+    "package-all": "node package.js --name='νTorrent' --icon=icon/web_hi_res_512.icns --all"
   },
   "author": {
     "name": "Jason Lee",
