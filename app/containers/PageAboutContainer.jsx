@@ -19,7 +19,7 @@ export default class PageAboutContainer extends React.Component {
             <div className="brand">
               <img src="../icon/res/mipmap-hdpi/ic_launcher.png" />
             </div>
-            <p>νTorrent(nuTorrent) is a pure javascript BitTorrent client based on Electron, React, torrent-stream.</p>
+            <p>nuTorrent(νTorrent) is a pure javascript BitTorrent client based on Electron, React, torrent-stream.</p>
             <hr />
             <p>MIT © LeeChSien <button className="btn btn-default btn-sm" onClick={this.openUrl.bind(this, 'https://github.com/LeeChSien/nuTorrent')}>Github Repo</button></p>
           </div>
