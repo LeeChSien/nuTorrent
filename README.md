@@ -1,7 +1,7 @@
-Electron Torrent
+νTorrent
 ==============
 
-Electron-Torrent is a pure javascript bittorrent client based on Electron, React, torrent-stream.
+νTorrent(nuTorrent) is a pure javascript bittorrent client based on Electron, React, torrent-stream.
 
 OS X Binary (v0.5.0): [download link](https://goo.gl/NmvddN)
 
