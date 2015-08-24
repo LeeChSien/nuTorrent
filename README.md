@@ -3,7 +3,7 @@
 
 νTorrent(nuTorrent) is a pure javascript bittorrent client based on Electron, React, torrent-stream.
 
-OS X Binary (v0.5.0): [download link](https://goo.gl/NmvddN)
+OS X Binary (v0.6.0): [download link](https://github.com/LeeChSien/nuTorrent/releases/download/v0.6.0/OSX-nuTorrent-0.6.0.zip)
 
 Screenshot
 ------------
