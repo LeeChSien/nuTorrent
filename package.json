@@ -15,6 +15,10 @@
     "package-all": "node package.js --name='nuTorrent' --icon=icon/web_hi_res_512.icns --all"
   },
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/LeeChSien/nuTorrent"
+  },
   "author": {
     "name": "Jason Lee",
     "email": "chsienlee@gmail.com",
