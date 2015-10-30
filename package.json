@@ -14,6 +14,7 @@
     "package": "node package.js --name='nuTorrent' --icon=./icon/web_hi_res_512.icns",
     "package-all": "node package.js --name='nuTorrent' --icon=icon/web_hi_res_512.icns --all"
   },
+  "license": "MIT",
   "author": {
     "name": "Jason Lee",
     "email": "chsienlee@gmail.com",
